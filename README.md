@@ -1,13 +1,15 @@
-# File Converter
+<img src="assets/icon.png" width="96" alt="Recast logo">
 
-**Convert any file from the right-click menu in Windows 11. Fully offline.**
+# Recast
 
-Right-click a file → **Convert with File Converter** → **PDF / DOCX / PPTX**. The converted file appears
+**Convert any file, or strip its hidden metadata, from the right-click menu in Windows 11. Fully offline.**
+
+Right-click a file → **Recast** → **PDF / DOCX / PPTX** or **Remove metadata**. The result appears
 next to the original. The app opens for anything else: images, audio, video, spreadsheets, OCR, merging PDFs.
 
 No server, no internet, no uploads. Everything runs on your PC with free, open-source tools.
 
-![File Converter in light mode](docs/app-light.png)
+![Recast in light mode](docs/app-light.png)
 
 ---
 
@@ -38,6 +40,7 @@ No server, no internet, no uploads. Everything runs on your PC with free, open-s
 | Video (MP4, MOV, AVI, MKV, WEBM) | MP4, WEBM, animated GIF, MP3 |
 | Audio (MP3, WAV, M4A, OGG, FLAC) | Any of these |
 | Scanned PDF or photo of text | Searchable PDF, or plain text (OCR) |
+| PDF, Word, Excel, PowerPoint, images, audio, video | **Remove metadata**: a clean copy without author, GPS location, camera model, dates, comment authors, tags |
 
 ---
 
@@ -45,7 +48,7 @@ No server, no internet, no uploads. Everything runs on your PC with free, open-s
 
 ### 1. Install the converters
 
-File Converter drives these free programs. Open **Terminal** and run:
+Recast drives these free programs. Open **Terminal** and run:
 
 ```
 winget install Python.Python.3.13
@@ -53,20 +56,21 @@ winget install TheDocumentFoundation.LibreOffice
 winget install JohnMacFarlane.Pandoc
 winget install Gyan.FFmpeg
 winget install UB-Mannheim.TesseractOCR
+winget install OliverBetz.ExifTool
 ```
 
-You can skip any of the last four. The app turns off only the formats that need the missing program
+You can skip any of the last five. The app turns off only the formats that need the missing program
 and tells you how to install it.
 
-### 2. Download File Converter
+### 2. Download Recast
 
-Click **Code → Download ZIP** above and unzip it somewhere **permanent**, for example `C:\Tools\File Converter`.
+Click **Code → Download ZIP** above and unzip it somewhere **permanent**, for example `C:\Tools\Recast`.
 The right-click menu points to this folder. If you move it later, run `install.bat` again.
 
 Or with git:
 
 ```
-git clone https://github.com/Ahany1440/file-converter.git "C:\Tools\File Converter"
+git clone https://github.com/Ahany1440/recast.git "C:\Tools\Recast"
 ```
 
 ### 3. Turn on Developer Mode (for the Windows 11 menu)
@@ -82,8 +86,8 @@ appears under **Show more options**.
 Double-click it. The first run takes a few minutes while it sets up Python packages. It adds:
 
 - the right-click entry (new Windows 11 menu and the classic one),
-- **File Converter** in the Start Menu,
-- **Send to → File Converter**, which opens many files at once.
+- **Recast** in the Start Menu,
+- **Send to → Recast**, which opens many files at once.
 
 ---
 
@@ -92,16 +96,23 @@ Double-click it. The first run takes a few minutes while it sets up Python packa
 **Right-click a file:**
 
 ```
-Convert with File Converter  ▸   Open in File Converter…
-                                 ───────────────
-                                 PDF
-                                 DOCX
-                                 PPTX
+Recast  ▸   Open in Recast…
+            ───────────────
+            PDF
+            DOCX
+            PPTX
+            ───────────────
+            Remove metadata
 ```
 
 The menu keeps to the three most-used formats, leaving out the file's own type. A small window shows
-progress, then **Show in folder** / **Open**. **Open in File Converter…** opens the full app for every
+progress next to your mouse, then **Show in folder** / **Open**. **Open in Recast…** opens the full app for every
 other format.
+
+**Remove metadata** saves a clean copy, e.g. `photo (clean).jpg`: GPS location, camera and phone model, author,
+"last modified by", company, comment and tracked-change authors, dates and tags are gone. The content stays
+exactly the same (photos keep their rotation and colours; audio and video aren't re-encoded). Text written
+*inside* a document, like a name in a paragraph, is content, not metadata, so it isn't touched.
 
 **In the app:**
 
@@ -111,7 +122,7 @@ other format.
 - Extra settings appear only when they apply: page range, image quality and size, video height, OCR language.
 - Double-click a finished file to show it in Explorer.
 
-![File Converter in dark mode](docs/app-dark.png)
+![Recast in dark mode](docs/app-dark.png)
 
 **Rules it always follows**
 
@@ -158,6 +169,7 @@ Engines are named as text (`"module.function"`) and imported only when used, so 
 | `sheets.py` | pandas + openpyxl | spreadsheets ↔ CSV / JSON / HTML |
 | `media.py` | FFmpeg | audio and video |
 | `ocr.py` | Tesseract | scans → searchable PDF / text |
+| `clean.py` | PyMuPDF, ExifTool, FFmpeg, zip rewriting for Office | remove metadata |
 | `tools.py` | — | finds those programs, even when they aren't on `PATH` |
 
 ### 3. Running safely — `core.py`
@@ -242,9 +254,10 @@ Run `uninstall.bat` (it removes both menus, Send To and the Start Menu entry), t
 ## For developers
 
 ```
-.venv\Scripts\python -m pytest tests     # ~200 tests, about a minute
+.venv\Scripts\python -m pytest tests     # ~240 tests, about a minute
 build_menu.bat                           # rebuild menu\FileConverterMenu.dll (needs MinGW g++)
 build_exe.bat                            # optional standalone .exe (PyInstaller)
+python assets\draw_logo.py assets         # redraw the icon
 ```
 
 The tests generate a sample of every input format, run every conversion in the map, and open each result

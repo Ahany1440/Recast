@@ -29,6 +29,10 @@ SPECS = {
         r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe",
         r"C:\ffmpeg\bin\ffmpeg.exe",
     ]),
+    "exiftool": ("ExifTool", "winget install OliverBetz.ExifTool", [
+        r"%LOCALAPPDATA%\Programs\ExifTool\ExifTool.exe",
+        r"%ProgramFiles%\ExifTool\ExifTool.exe",
+    ]),
     "tesseract": ("Tesseract OCR", "winget install UB-Mannheim.TesseractOCR", [
         r"%ProgramFiles%\Tesseract-OCR\tesseract.exe",
         r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe",

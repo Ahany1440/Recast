@@ -1,8 +1,8 @@
-// Windows 11 right-click menu entry ("Convert with File Converter" > Open in File Converter... / PDF / DOCX / PPTX).
+// Windows 11 right-click menu entry ("Recast" > Open in Recast... / PDF / DOCX / PPTX / Remove metadata).
 // Explorer loads this through the package in AppxManifest.xml. What to show comes from menu.txt next to
 // this DLL, written by shell.py:
 //   line 1:           the command that starts the app, e.g. "C:\...\pythonw.exe" "C:\...\gui.pyw"
-//   following lines:  ext <TAB> target <TAB> label      (target "*more" = "Open in File Converter")
+//   following lines:  ext <TAB> target <TAB> label      (target "*more" = "Open in Recast")
 // Build: g++ -shared -O2 -static -o FileConverterMenu.dll menu.cpp menu.def -lole32 -luuid -lshell32 -lshlwapi
 #include <windows.h>
 #include <shobjidl.h>
@@ -135,7 +135,7 @@ public:
     IFACEMETHODIMP_(ULONG) Release() { LONG r = InterlockedDecrement(&refs); if (!r) delete this; return r; }
 
     IFACEMETHODIMP GetTitle(IShellItemArray*, LPWSTR* name) {
-        return SHStrDupW(target.empty() ? L"Convert with File Converter" : label.c_str(), name);
+        return SHStrDupW(target.empty() ? L"Recast" : label.c_str(), name);
     }
     IFACEMETHODIMP GetIcon(IShellItemArray*, LPWSTR* icon) {
         if (!target.empty()) { *icon = nullptr; return E_NOTIMPL; }
@@ -144,14 +144,14 @@ public:
     IFACEMETHODIMP GetToolTip(IShellItemArray*, LPWSTR* tip) { *tip = nullptr; return E_NOTIMPL; }
     IFACEMETHODIMP GetCanonicalName(GUID* guid) { *guid = CLSID_Menu; return S_OK; }
     IFACEMETHODIMP GetFlags(EXPCMDFLAGS* flags) {
-        *flags = target.empty() ? ECF_HASSUBCOMMANDS : (target == L"*more" ? ECF_SEPARATORAFTER : ECF_DEFAULT);
+        *flags = target.empty() ? ECF_HASSUBCOMMANDS : (target == L"*more" ? ECF_SEPARATORAFTER : target == L"clean" ? ECF_SEPARATORBEFORE : ECF_DEFAULT);
         return S_OK;
     }
     IFACEMETHODIMP GetState(IShellItemArray* items, BOOL, EXPCMDSTATE* state) {
         // Show an entry only if every selected file can be converted that way.
         Config c = load_config();
         auto paths = selected_paths(items);
-        // The parent and "More formats" show for any supported file (each has a "*more" line).
+        // The parent and "Open in Recast" show for any supported file (each has a "*more" line).
         std::wstring need = (target.empty() || target == L"*more") ? L"*more" : target;
         bool ok = !paths.empty();
         for (auto& p : paths)
@@ -175,17 +175,19 @@ public:
     IFACEMETHODIMP EnumSubCommands(IEnumExplorerCommand** out) {
         if (!target.empty()) { *out = nullptr; return E_NOTIMPL; }
         // Every choice that appears for any file type, in menu.txt order; GetState hides the ones that don't fit.
+        // "Open in Recast" first with a line under it, then the formats, then "Remove metadata" below a line.
         Config c = load_config();
         std::vector<IExplorerCommand*> subs;
+        subs.push_back(new (std::nothrow) Command(L"*more", L"Open in Recast\u2026"));
         std::vector<std::wstring> seen;
         for (auto& e : c.entries) {
             bool dup = false;
             for (auto& s : seen) if (s == e.target) dup = true;
-            if (dup || e.target == L"*more") continue;
+            if (dup || e.target == L"*more" || e.target == L"clean") continue;
             seen.push_back(e.target);
             subs.push_back(new (std::nothrow) Command(e.target, e.label));
         }
-        subs.push_back(new (std::nothrow) Command(L"*more", L"More formats\u2026"));
+        subs.push_back(new (std::nothrow) Command(L"clean", L"Remove metadata"));
         *out = new (std::nothrow) Enum(subs);
         return *out ? S_OK : E_OUTOFMEMORY;
     }

@@ -75,6 +75,10 @@ for out in AUDIO:
 # OCR
 add(["pdf"] + IMAGES, "ocr-pdf", "Searchable PDF (OCR)", "ocr.convert", ["tesseract"], "pdf")
 add(["pdf"] + IMAGES, "ocr-txt", "Text from scan (OCR)", "ocr.convert", ["tesseract"], "txt")
+# Remove metadata: a clean copy in the same format
+add(["pdf", "docx", "xlsx", "pptx"], "clean", "Remove metadata", "clean.convert")
+add(IMAGES, "clean", "Remove metadata", "clean.convert", ["exiftool"])
+add(VIDEO + AUDIO, "clean", "Remove metadata", "clean.convert", ["ffmpeg"])
 
 # Actions that take several files and make one.
 MULTI = {

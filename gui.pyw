@@ -1,7 +1,7 @@
-"""File Converter desktop app.
+"""Recast desktop app: converts files and removes metadata.
 
     gui.pyw                         open the app
-    gui.pyw FILE [FILE...]          open the app with these files (Send To / "Open in File Converter")
+    gui.pyw FILE [FILE...]          open the app with these files (Send To / "Open in Recast")
     gui.pyw --convert TARGET FILE   convert one file right away (the right-click menu), small popup only
 """
 import multiprocessing as mp
@@ -15,9 +15,9 @@ import winreg
 from pathlib import Path
 from tkinter import filedialog, ttk
 
-MARK, MARK_INK = "#F5C542", "#17243A"
+MARK, MARK_INK = "#08EEFF", "#0B1630"  # brand cyan on navy, as in the icon
 SHORT = {"pdf-split": "pages", "ocr-pdf": "searchable .pdf", "ocr-txt": "text",
-         "merge-pdf": "one .pdf", "images-pdf": "one .pdf"}
+         "merge-pdf": "one .pdf", "images-pdf": "one .pdf", "clean": "clean copy"}
 
 
 def system_is_dark():
@@ -93,7 +93,7 @@ def quick_convert(target, path):
     import converters
     import core
     root = tk.Tk()
-    setup_window(root, "File Converter")
+    setup_window(root, "Recast")
     root.resizable(False, False)
     root.attributes("-topmost", True)
     src = Path(path)
@@ -102,10 +102,10 @@ def quick_convert(target, path):
 
     frame = ttk.Frame(root, padding=18)
     frame.pack(fill="both", expand=True)
-    title = ttk.Label(frame, text=f"Converting {src.name}", font=("Segoe UI Variable Display", 13, "bold"),
+    title = ttk.Label(frame, text=(f"Removing metadata from {src.name}" if target == "clean" else f"Converting {src.name}"), font=("Segoe UI Variable Display", 13, "bold"),
                       wraplength=360)
     title.pack(anchor="w")
-    detail = ttk.Label(frame, text=f"to {label}", wraplength=360)
+    detail = ttk.Label(frame, text=("Saving a clean copy next to it" if target == "clean" else f"to {label}"), wraplength=360)
     detail.pack(anchor="w", pady=(2, 10))
     bar = ttk.Progressbar(frame, mode="indeterminate", length=360)
     bar.pack(fill="x")
@@ -160,7 +160,7 @@ class App:
         self.tools = status()
 
         self.root = root = TkinterDnD.Tk()
-        setup_window(root, "File Converter")
+        setup_window(root, "Recast")
         root.geometry("820x700")
         root.minsize(480, 560)
         self.items = {}  # tree row id -> {"path", "ext", "state", "saved"}
@@ -175,7 +175,7 @@ class App:
         # top bar
         top = ttk.Frame(outer)
         top.grid(row=0, column=0, sticky="ew")
-        ttk.Label(top, text="File Converter", foreground="gray").pack(side="left")
+        ttk.Label(top, text="Recast", foreground="gray").pack(side="left")
         self.theme_btn = ttk.Button(top, command=self.toggle_theme)
         self.theme_btn.pack(side="right")
 
@@ -473,7 +473,7 @@ class App:
             self.shell.install() if self.menu_var.get() else self.shell.uninstall()
         except Exception as e:
             from tkinter import messagebox
-            messagebox.showerror("File Converter", f"Couldn't change the right-click menu: {e}")
+            messagebox.showerror("Recast", f"Couldn't change the right-click menu: {e}")
         self.menu_var.set(self.shell.is_installed())
 
     def toggle_theme(self):

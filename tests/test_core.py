@@ -76,9 +76,9 @@ def test_right_click_menu_entries():
     entries = shell.menu_entries()
     assert {"pdf", "docx", "jpeg", "mp4"} <= set(entries)  # aliases like .jpeg get a menu too
     pdf = dict((key, (label, cmd)) for key, label, cmd in entries["pdf"])
-    assert pdf["00open"][0] == "Open in File Converter…"
+    assert pdf["00open"][0] == "Open in Recast…"
     label, cmd = next(v for k, v in pdf.items() if k.endswith("docx"))
     assert label == "DOCX"
     assert cmd.endswith('--convert docx "%1"') and "pythonw.exe" in cmd and "gui.pyw" in cmd
-    assert [label for _, label, _ in entries["docx"]] == ["Open in File Converter…", "PDF", "PPTX"]
-    assert [label for _, label, _ in entries["mp3"]] == ["Open in File Converter…", "WAV"]  # no basics: falls back
+    assert [label for _, label, _ in entries["docx"]] == ["Open in Recast…", "PDF", "PPTX", "Remove metadata"]
+    assert [label for _, label, _ in entries["mp3"]] == ["Open in Recast…", "WAV", "Remove metadata"]  # no basics: falls back

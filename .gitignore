@@ -6,3 +6,5 @@ logs/
 tests/samples/
 menu/menu.txt
 *.spec
+installers/
+linkedin-post/

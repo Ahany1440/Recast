@@ -13,9 +13,13 @@ from core import FROZEN, HERE
 
 ROOT = r"Software\Classes\SystemFileAssociations"
 KEY = "FileConverter"
-SENDTO = Path(os.environ["APPDATA"]) / r"Microsoft\Windows\SendTo\File Converter.lnk"
-START_MENU = Path(os.environ["APPDATA"]) / r"Microsoft\Windows\Start Menu\Programs\File Converter.lnk"
-SEPARATOR_AFTER = 0x40
+APP_NAME = "Recast"
+PROGRAMS = Path(os.environ["APPDATA"]) / r"Microsoft\Windows"
+SENDTO = PROGRAMS / "SendTo" / f"{APP_NAME}.lnk"
+START_MENU = PROGRAMS / "Start Menu" / "Programs" / f"{APP_NAME}.lnk"
+# Shortcuts from before the rename to Recast, removed on install/uninstall.
+OLD_LINKS = [PROGRAMS / "SendTo" / "File Converter.lnk", PROGRAMS / "Start Menu" / "Programs" / "File Converter.lnk"]
+SEPARATOR_BEFORE, SEPARATOR_AFTER = 0x20, 0x40
 APP_DIR = Path(__file__).parent
 MENU_DIR = APP_DIR / "menu"
 PACKAGE = "FileConverter.Local"
@@ -44,9 +48,11 @@ def menu_entries():
     for ext, real in sorted(exts.items()):
         outs = converters.MAP[real]
         targets = [t for t in BASICS if t in outs] or [t for t in FALLBACK if t in outs][:3]
-        items = [("00open", "Open in File Converter…", _cmd('"%1"'))]
+        items = [("00open", f"Open in {APP_NAME}…", _cmd('"%1"'))]
         items += [(f"{n:02d}{t}", MENU_NAMES.get(t, t.upper()), _cmd("--convert", t, '"%1"'))
                   for n, t in enumerate(targets, 1)]
+        if "clean" in outs:
+            items.append(("90clean", "Remove metadata", _cmd("--convert", "clean", '"%1"')))
         entries[ext] = items
     return entries
 
@@ -68,7 +74,7 @@ def install():
     for ext, items in menu_entries().items():
         base = rf"{ROOT}\.{ext}\shell\{KEY}"
         with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base) as k:
-            winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, "Convert with File Converter")
+            winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, APP_NAME)
             winreg.SetValueEx(k, "SubCommands", 0, winreg.REG_SZ, "")
             winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, icon())
         for name, label, command in items:
@@ -76,6 +82,8 @@ def install():
                 winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, label)
                 if name == "00open":
                     winreg.SetValueEx(k, "CommandFlags", 0, winreg.REG_DWORD, SEPARATOR_AFTER)
+                if name == "90clean":
+                    winreg.SetValueEx(k, "CommandFlags", 0, winreg.REG_DWORD, SEPARATOR_BEFORE)
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, rf"{base}\shell\{name}\command") as k:
                 winreg.SetValueEx(k, "", 0, winreg.REG_SZ, command)
     # Send To passes every selected file at once, so it's how you open a batch (e.g. to merge PDFs).
@@ -116,8 +124,8 @@ def uninstall():
         exts = []
     for ext in exts:
         _delete_tree(rf"{ROOT}\{ext}\shell\{KEY}")
-    SENDTO.unlink(missing_ok=True)
-    START_MENU.unlink(missing_ok=True)
+    for link in [SENDTO, START_MENU, *OLD_LINKS]:
+        link.unlink(missing_ok=True)
     if _win11_menu_installed():
         _powershell(f"Get-AppxPackage {PACKAGE} | Remove-AppxPackage")
 
