@@ -25,7 +25,7 @@ No server, no internet, no uploads. Everything runs on your PC with free, open-s
 
 ---
 
-## What it can do
+## What it can do 
 
 | From | To |
 |---|---|
