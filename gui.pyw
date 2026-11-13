@@ -15,6 +15,8 @@ import winreg
 from pathlib import Path
 from tkinter import filedialog, ttk
 
+from converters.tools import ALREADY_SMALL
+
 # Format chips, in the order they're offered. At most MAX_CHIPS show; the rest go under "More".
 CHIPS = {"merge-pdf": ("Merge", "one .pdf"), "images-pdf": ("One PDF", ".pdf"),
          "pdf": ("PDF", ".pdf"), "docx": ("Word", ".docx"),
@@ -213,6 +215,12 @@ def quick_convert(target, path):
     def finished(saved=None, error=None):
         bar.stop()
         bar.pack_forget()
+        if error and error.startswith(ALREADY_SMALL):
+            title.config(text=f"{src.name} is already small")
+            detail.config(text="It couldn't get noticeably smaller, so no copy was made. "
+                               "Open it in Recast and choose Strong for a smaller, lower-quality copy.")
+            ttk.Button(buttons, text="Close", command=root.destroy).pack(side="right")
+            return
         if error:
             title.config(text=f"Couldn't convert {src.name}")
             detail.config(text=error, foreground="#D9534F")
@@ -262,9 +270,25 @@ class App:
         self.ui = UiQueue(root)
 
         outer = ttk.Frame(root, padding=(24, 16, 24, 16))
-        outer.pack(fill="both", expand=True)
         outer.columnconfigure(0, weight=1)
         self.outer = outer
+        # Re-laying out the themed widgets costs ~90 ms, so redoing it on every mouse move while the window
+        # edge is dragged makes resizing stutter. The contents keep their size during a drag and catch up
+        # once it pauses.
+        self._settle = None
+        outer.place(x=0, y=0, width=820, height=800)
+        root.bind("<Configure>", lambda e: e.widget is root and self.resize_later())
+        try:  # and Windows shouldn't repaint the whole window on each step either, only the uncovered strip
+            import ctypes
+            set_style = ctypes.windll.user32.SetClassLongPtrW
+            set_style.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_ssize_t]
+            get_style = ctypes.windll.user32.GetClassLongPtrW
+            get_style.restype = ctypes.c_ssize_t
+            root.update_idletasks()
+            for hwnd in (root.winfo_id(), ctypes.windll.user32.GetParent(root.winfo_id())):
+                set_style(hwnd, -26, get_style(hwnd, -26) & ~0x3)  # GCL_STYLE without CS_VREDRAW | CS_HREDRAW
+        except (OSError, AttributeError):
+            pass
 
         # header
         top = ttk.Frame(outer)
@@ -497,14 +521,15 @@ class App:
             self.sel = target
             self.refresh()
 
-    def chip(self, col, title, sub, selected, on_click, row=0, span=1):
+    def chip(self, col, title, sub, selected, on_click, parent=None):
         c = self.colors
         bg = c["tint"] if selected else c["field"]
         line = c["accent"] if selected else c["border"]
-        f = tk.Frame(self.chips, bg=bg, cursor="hand2", takefocus=1, highlightthickness=1,
+        parent = parent or self.chips
+        f = tk.Frame(parent, bg=bg, cursor="hand2", takefocus=1, highlightthickness=1,
                      highlightbackground=line, highlightcolor=c["accent"])
-        f.grid(row=row, column=col, columnspan=span, sticky="ew", padx=(0 if col == 0 else 8, 0))
-        self.chips.columnconfigure(col, weight=1, uniform="chip")
+        f.grid(row=0, column=col, sticky="ew", padx=(0 if col == 0 else 8, 0))
+        parent.columnconfigure(col, weight=1, uniform="chip")
         a = tk.Label(f, text=title, font=("Segoe UI", 11, "bold"), bg=bg, fg=c["text"])
         b = tk.Label(f, text=sub, font=SMALL, bg=bg, fg=c["accent"] if selected else c["muted"])
         a.pack(pady=(10, 0))
@@ -523,8 +548,8 @@ class App:
     def refresh(self):
         opts = self.choices()
         usable = [k for k, _, ok in opts if ok]
-        if self.sel not in usable:
-            self.sel = usable[0] if usable else None
+        if usable and self.sel not in usable:  # no files waiting (e.g. mid-batch): keep the choice
+            self.sel = usable[0]
         target = self.sel
         pend = self.pending()
         has = bool(self.items)
@@ -558,8 +583,10 @@ class App:
             if tools:
                 ttk.Label(self.chips, text="Or keep the same type", font=BODY).grid(
                     row=1, column=0, columnspan=MAX_CHIPS + 1, sticky="w", pady=(14, 6))
+                row = tk.Frame(self.chips, bg=self.chips.cget("bg"))  # two equal halves, whatever the formats above
+                row.grid(row=2, column=0, columnspan=MAX_CHIPS + 1, sticky="ew")
                 for col, k in enumerate(tools):
-                    self.chip(col * 2, *TOOLS[k], k == target, lambda e, k=k: self.pick(k), row=2, span=2)  # wider names
+                    self.chip(col, *TOOLS[k], k == target, lambda e, k=k: self.pick(k), parent=row)
         # an emptied Tk frame keeps its old size, so take it out of the layout instead
         if self.chips.winfo_children():
             self.chips.pack(fill="x", pady=(8, 0), before=self.hint)
@@ -664,8 +691,12 @@ class App:
                                 "done", Path(saved).name)
                 except Exception as e:
                     for iid in group:
-                        self.items[iid]["state"] = "failed"
-                        self.ui(self.set_row, iid, f"Failed: {e}", "failed")
+                        self.items[iid]["state"] = "failed"  # stays in the batch, e.g. to retry on Strong
+                        if str(e).startswith(ALREADY_SMALL):
+                            self.ui(self.set_row, iid, "Already small"
+                                    + ("" if opts.get("strength") == "Strong" else ", try Strong"), "waiting")
+                        else:
+                            self.ui(self.set_row, iid, f"Failed: {e}", "failed")
             self.busy = False
             self.ui(self.refresh)
 
@@ -703,6 +734,12 @@ class App:
         self.drop.config(bg=bg, highlightbackground=line, highlightcolor=line)
         self.drop_title.config(bg=bg, fg=c["text"])
 
+    def resize_later(self):
+        if self._settle:
+            self.root.after_cancel(self._settle)
+        self._settle = self.root.after(120, lambda: self.outer.place_configure(
+            width=self.root.winfo_width(), height=self.root.winfo_height()))
+
     def apply_theme_colors(self):
         import sv_ttk
         theme = sv_ttk.get_theme()
@@ -710,6 +747,7 @@ class App:
         c["tint"] = mix(c["accent"], c["field"], 0.16)
         style = ttk.Style()
         bg = style.lookup("TFrame", "background") or self.root.cget("bg")
+        self.root.config(bg=bg)  # what shows in the gap while a resize catches up
         self.chips.config(bg=bg)
         self.change.config(bg=bg, fg=c["accent"])
         self.footer.config(foreground=c["muted"])

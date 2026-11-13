@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import converters  # noqa: E402
-from converters.tools import ConversionError, find, run, status  # noqa: E402
+from converters.tools import ALREADY_SMALL, ConversionError, find, run, status  # noqa: E402
 from tests.make_samples import make  # noqa: E402
 
 TOOLS = status()
@@ -81,7 +81,7 @@ def test_conversion(ext, target, samples, tmp_path):
     try:
         outs = converters.run(target, [src], tmp_path, {"_timeout": 300})
     except ConversionError as e:
-        if target == "compress" and "already about as small" in str(e):
+        if target == "compress" and str(e).startswith(ALREADY_SMALL):
             return  # tiny samples can't shrink; the engine ran and refused as designed (see test_compress.py)
         raise
     assert outs

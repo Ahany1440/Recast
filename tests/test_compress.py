@@ -69,7 +69,7 @@ def test_already_small_makes_no_copy(tmp_path):
     from PIL import Image
     src = tmp_path / "tiny.png"
     Image.new("RGB", (10, 10), "red").save(src, optimize=True)
-    with pytest.raises(ConversionError, match="already"):
+    with pytest.raises(ConversionError, match="Already"):
         converters.run("compress", [src], tmp_path, {"_timeout": 60})
     assert not list(tmp_path.glob("*(compressed)*"))
 

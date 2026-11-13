@@ -14,6 +14,11 @@ class ConversionError(Exception):
     pass
 
 
+# "Smaller file" couldn't shrink it: not a failure, so the app shows this calmly (matched by text,
+# since errors come back from the worker process as strings).
+ALREADY_SMALL = "Already as small as it gets, so no copy was made."
+
+
 # tool -> (display name, winget command, fallback locations when it is not on PATH)
 SPECS = {
     "soffice": ("LibreOffice", "winget install TheDocumentFoundation.LibreOffice", [

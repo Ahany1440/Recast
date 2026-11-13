@@ -8,7 +8,7 @@ import io
 import zipfile
 from pathlib import Path
 
-from .tools import ConversionError, require, run
+from .tools import ALREADY_SMALL, ConversionError, require, run
 
 OFFICE = {"docx", "xlsx", "pptx"}
 IMAGES = ["png", "jpg", "webp", "tiff", "heic"]  # BMP/GIF/ICO have nothing worth squeezing
@@ -28,11 +28,42 @@ AUDIO_ARGS = {
 
 
 def _pdf(src, out, strong):
+    """Shrink each picture to the resolution it's shown at, keeping a new version only if it's smaller.
+    (PyMuPDF's own rewrite_images left the pictures as they were and made files bigger.)"""
+    import pymupdf as fitz
+    from PIL import Image
     from .pdf_tools import _open
     doc = _open(src)
-    dpi = PDF_DPI[strong]
-    doc.rewrite_images(dpi_threshold=dpi + 10, dpi_target=dpi, quality=JPEG_QUALITY[strong], lossy=True,
-                       lossless=True, bitonal=True, color=True, gray=True)
+    dpi, done = PDF_DPI[strong], set()
+    for page in doc:
+        for xref, smask, w, h, *_ in page.get_images(full=True):
+            rects = page.get_image_rects(xref)
+            if xref in done or smask or not rects:  # see-through pictures keep their mask untouched
+                continue
+            done.add(xref)
+            info = doc.xref_get_key(xref, "Filter")[1]
+            raw = len(doc.xref_stream_raw(xref))
+            try:
+                pix = fitz.Pixmap(doc, xref)
+                if pix.alpha or pix.n not in (1, 3):  # CMYK, indexed, ...: plain RGB
+                    pix = fitz.Pixmap(fitz.csRGB, pix, 0)
+                im = Image.frombytes("L" if pix.n == 1 else "RGB", (pix.width, pix.height), pix.samples)
+            except (RuntimeError, ValueError):
+                continue  # a picture format MuPDF can't decode stays as it is
+            scale = min(1.0, dpi * max(r.width for r in rects) / 72 / w)
+            if scale < 0.95:
+                im = im.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            if "DCT" in info or strong:  # photos (and everything, on Strong) as JPEG
+                im.save(buf, "JPEG", quality=JPEG_QUALITY[strong], optimize=True)
+                new = buf.getvalue()
+                if len(new) < raw * 0.9:
+                    page.replace_image(xref, stream=new)
+            elif scale < 0.95:  # screenshots and drawings on Light: smaller, but still lossless
+                cs = fitz.csGRAY if im.mode == "L" else fitz.csRGB
+                small = fitz.Pixmap(cs, im.width, im.height, im.tobytes(), 0)
+                if len(small.tobytes("png")) < raw * 0.9:
+                    page.replace_image(xref, pixmap=small)
     doc.save(out, garbage=4, deflate=True, deflate_images=True, deflate_fonts=True, use_objstms=1)
 
 
@@ -122,6 +153,5 @@ def convert(src, out_dir, fmt, opts):
         raise ConversionError(f".{ext} files can't be made smaller.")
     if out.stat().st_size >= src.stat().st_size * 0.97:
         out.unlink()
-        raise ConversionError("This file is already about as small as it gets, so no copy was made."
-                              + ("" if strong else " Try Strong."))
+        raise ConversionError(ALREADY_SMALL + ("" if strong else " Try Strong."))
     return [out]
