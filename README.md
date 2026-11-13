@@ -9,7 +9,10 @@ next to the original. The app opens for anything else: images, audio, video, spr
 
 No server, no internet, no uploads. Everything runs on your PC with free, open-source tools.
 
-![Recast in light mode](docs/app-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/app-dark.png">
+  <img alt="The Recast window: your files on the left, formats to convert to on the right" src="docs/app-light.png">
+</picture>
 
 ---
 
@@ -132,8 +135,6 @@ file can't get noticeably smaller, no copy is made and it tells you so.
 - Files are saved next to the originals; **Change** picks a folder instead.
 - Extra settings appear only when they apply: page range, image quality and size, video height, OCR language, how much smaller.
 - **Settings** (top right): dark mode and the right-click menu switch.
-
-![Recast in dark mode](docs/app-dark.png)
 
 **Rules it always follows**
 
