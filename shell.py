@@ -29,7 +29,10 @@ def launcher():
     """The program + arguments that start the app (the .exe, or pythonw + gui.pyw from source)."""
     if FROZEN:
         return [sys.executable]
-    return [str(Path(sys.executable).with_name("pythonw.exe")), str(Path(__file__).with_name("gui.pyw"))]
+    gui = Path(__file__).with_name("gui_qt.pyw")  # an optional local Qt window, if you made one
+    if not gui.exists():
+        gui = gui.with_name("gui.pyw")
+    return [str(Path(sys.executable).with_name("pythonw.exe")), str(gui)]
 
 
 def _cmd(*args):

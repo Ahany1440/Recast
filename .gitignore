@@ -8,3 +8,6 @@ menu/menu.txt
 *.spec
 installers/
 linkedin-post/
+
+# a personal Qt version of the window, kept off GitHub
+gui_qt.pyw

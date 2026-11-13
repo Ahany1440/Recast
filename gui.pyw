@@ -93,7 +93,14 @@ def near_pointer(w, h, offset=16):
     return max(work.left, min(x, work.right - w)), max(work.top, min(y, work.bottom - h))
 
 
-def own_taskbar_button(root):
+def tk_hwnd(root):
+    """The Windows handle of a Tk window's outer frame."""
+    import ctypes
+    root.update_idletasks()
+    return ctypes.windll.user32.GetParent(root.winfo_id())
+
+
+def own_taskbar_button(hwnd):
     """Give the window its own taskbar identity so it shows the Recast icon. Store-installed Python is a
     packaged app whose identity wins over the per-process ID, so this sets it on the window itself."""
     import ctypes
@@ -114,8 +121,6 @@ def own_taskbar_button(root):
 
     iid = GUID(0x886D8EEB, 0x8CF2, 0x4446, 0x8D, 0x02, 0xCD, 0xBA, 0x1D, 0xBD, 0xCF, 0x99)  # IPropertyStore
     key = PROPERTYKEY(GUID(0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3), 5)  # AppUserModel.ID
-    root.update_idletasks()
-    hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
     store = ctypes.c_void_p()
     if ctypes.windll.shell32.SHGetPropertyStoreForWindow(hwnd, ctypes.byref(iid), ctypes.byref(store)):
         return
@@ -129,15 +134,13 @@ def own_taskbar_button(root):
         ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtbl[2])(store)  # Release
 
 
-def exact_icons(root, ico):
+def exact_icons(hwnd, ico):
     """Give the window the icon frames at exactly the sizes this screen's scaling uses (e.g. 40 and 20 px
     at 125%). Tk picks a nearby size and stretches it, which is what made the taskbar icon blurry."""
     import ctypes
     user32 = ctypes.windll.user32
     user32.LoadImageW.restype = ctypes.c_void_p
     user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
-    root.update_idletasks()
-    hwnd = user32.GetParent(root.winfo_id())
     for which, metric in ((1, 11), (0, 49)):  # ICON_BIG / SM_CXICON, ICON_SMALL / SM_CXSMICON
         size = user32.GetSystemMetrics(metric)
         icon = user32.LoadImageW(None, str(ico), 1, size, size, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
@@ -145,12 +148,14 @@ def exact_icons(root, ico):
             user32.SendMessageW(hwnd, 0x80, which, icon)  # WM_SETICON
 
 
-def title_bar_theme(root, dark):
+def dark_title_bar(hwnd, dark):
     """Windows draws the title bar light unless the window asks for dark."""
     import ctypes
-    root.update_idletasks()
-    hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
     ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(ctypes.c_int(dark)), 4)  # 20 = DWMWA_USE_IMMERSIVE_DARK_MODE
+
+
+def title_bar_theme(root, dark):
+    dark_title_bar(tk_hwnd(root), dark)
     # the frame only repaints on a size change, so nudge it
     w, h = root.winfo_width(), root.winfo_height()
     if w > 1:
@@ -172,8 +177,8 @@ def setup_window(root, title):
     except tk.TclError:
         pass
     try:
-        exact_icons(root, HERE / "assets" / "icon.ico")
-        own_taskbar_button(root)
+        exact_icons(tk_hwnd(root), HERE / "assets" / "icon.ico")
+        own_taskbar_button(tk_hwnd(root))
         title_bar_theme(root, system_is_dark())
     except (OSError, AttributeError):
         pass  # cosmetic only: worst case the taskbar shows the Python icon or a light title bar

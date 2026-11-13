@@ -79,6 +79,6 @@ def test_right_click_menu_entries():
     assert pdf["00open"][0] == "Open in Recast…"
     label, cmd = next(v for k, v in pdf.items() if k.endswith("docx"))
     assert label == "DOCX"
-    assert cmd.endswith('--convert docx "%1"') and "pythonw.exe" in cmd and "gui.pyw" in cmd
+    assert cmd.endswith('--convert docx "%1"') and "pythonw.exe" in cmd and (".pyw" in cmd)
     assert [label for _, label, _ in entries["docx"]] == ["Open in Recast…", "PDF", "PPTX", "Remove metadata", "Smaller file"]
     assert [label for _, label, _ in entries["mp3"]] == ["Open in Recast…", "WAV", "Remove metadata", "Smaller file"]  # no basics: falls back
