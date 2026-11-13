@@ -9,5 +9,5 @@ menu/menu.txt
 installers/
 linkedin-post/
 
-# a personal Qt version of the window, kept off GitHub
-gui_qt.pyw
+# create this empty file to hide the "runs on this computer" line in the window
+hide-privacy-note

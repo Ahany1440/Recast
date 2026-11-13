@@ -26,10 +26,10 @@ PACKAGE = "FileConverter.Local"
 
 
 def launcher():
-    """The program + arguments that start the app (the .exe, or pythonw + gui.pyw from source)."""
+    """The program + arguments that start the app (the .exe, or pythonw + gui_qt.pyw from source)."""
     if FROZEN:
         return [sys.executable]
-    gui = Path(__file__).with_name("gui_qt.pyw")  # an optional local Qt window, if you made one
+    gui = Path(__file__).with_name("gui_qt.pyw")  # the Qt window; gui.pyw if it was removed
     if not gui.exists():
         gui = gui.with_name("gui.pyw")
     return [str(Path(sys.executable).with_name("pythonw.exe")), str(gui)]

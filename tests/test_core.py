@@ -51,6 +51,14 @@ def test_merge(folder):
     assert saved.name == "merged.pdf"
 
 
+def test_custom_name(folder):
+    assert core.convert([folder / "sample.png"], "jpg", name="holiday").name == "holiday.jpg"
+    assert core.convert([folder / "sample.png"], "jpg", name="holiday.jpg").name == "holiday (2).jpg"
+    assert core.convert([folder / "sample.png"], "jpg", name="..\\a/b:c").name == "abc.jpg"  # no escaping the folder
+    assert core.convert([folder / "sample.pdf", folder / "sample.pdf"], "merge-pdf", name="both").name == "both.pdf"
+    assert core.convert([folder / "sample.png"], "jpg", name="  ").name == "sample.jpg"  # blank: the default
+
+
 def test_stuck_conversion_is_stopped(folder, monkeypatch):
     monkeypatch.setattr(core, "timeout_for", lambda *a: 0.01)
     with pytest.raises(ConversionError, match="stopped"):

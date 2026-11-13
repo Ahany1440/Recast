@@ -9,6 +9,7 @@ openpyxl
 xlrd
 odfpy
 pytesseract
+PySide6-Essentials
 sv-ttk
 tkinterdnd2
 pytest

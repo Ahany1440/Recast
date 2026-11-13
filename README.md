@@ -123,9 +123,12 @@ file can't get noticeably smaller, no copy is made and it tells you so.
 **In the app:**
 
 - Drag files or whole folders onto the window, or click **Add files…**.
-- Pick a format: the buttons show only formats that work for every file you added (the rest are under **More**).
-  **Smaller file** and **Remove metadata** have their own row, since they keep the file type.
-- Press **Convert**. When it's done, the button becomes **Show in folder**, and each row gets a **Show** link.
+- Pick a format on the right: it shows only formats that work for every file (the rest are under **more formats**).
+  **Smaller file** and **Remove metadata** have their own section, since they keep the file type.
+- Want different formats for different files? Click files to pick them. **Convert** then works on just those, and
+  the rest wait for the next round.
+- When the result is one file (one file in, or a merge), a **Name** box lets you name it. Leave it empty for the default.
+- Press **Convert**. Each finished file gets a **Show in folder** link.
 - Files are saved next to the originals; **Change** picks a folder instead.
 - Extra settings appear only when they apply: page range, image quality and size, video height, OCR language, how much smaller.
 - **Settings** (top right): dark mode and the right-click menu switch.
@@ -147,7 +150,7 @@ The project is small on purpose. Each piece is one file you can read in a few mi
 
 ```
 right-click menu ──┐
-Send To / Start ───┼──> gui.pyw ──> core.py ──> converters/ ──> LibreOffice, Pandoc, FFmpeg,
+Send To / Start ───┼──> gui_qt.pyw ──> core.py ──> converters/ ──> LibreOffice, Pandoc, FFmpeg,
 the app window ────┘                                           Tesseract, Python libraries
 ```
 
@@ -190,14 +193,17 @@ Engines are named as text (`"module.function"`) and imported only when used, so 
    On a timeout it kills the whole process tree, because `soffice.exe` starts a `soffice.bin` child.
 3. Moves the result next to the original under a name that doesn't exist yet.
 
-### 4. The window — `gui.pyw`
+### 4. The window — `gui_qt.pyw` and `gui.pyw`
 
-Tkinter with the [Sun Valley](https://github.com/rdbende/Sun-Valley-ttk-theme) theme for the Windows 11 look,
-and tkinterdnd2 for drag and drop. Conversions run on a worker thread. Tkinter isn't thread-safe, so the thread
-sends UI updates through a queue that the window reads (`UiQueue`).
+The main window is Qt (PySide6), styled with a stylesheet built from one colour palette per theme. Conversions run
+on a worker thread that reports back through Qt signals, which are safe to send across threads.
 
-`gui.pyw --convert pdf "C:\file.docx"` skips the window and shows only the small progress popup. That's what the
-right-click menu runs.
+The right-click popup is Tkinter (`gui.pyw`), because it opens faster for a one-off conversion:
+`gui_qt.pyw --convert pdf "C:\file.docx"` hands straight over to it. `gui.pyw` is also a complete Tkinter window
+of its own, used when PySide6 isn't installed. Both windows share its format list, colours and Windows tweaks.
+
+Memory, measured with the window open and idle: about 87 MB for the Qt window, 50 MB for the Tkinter one.
+When Recast is closed it uses nothing; the right-click menu is a small add-on inside Explorer.
 
 ### 5. The right-click menu — `shell.py` and `menu/`
 
@@ -212,7 +218,7 @@ Windows has two right-click menus, and each needs a different method:
   `Add-AppxPackage -Register AppxManifest.xml -ExternalLocation <folder>`, which works unsigned in Developer Mode.
 
 The DLL contains no format list. It reads `menu/menu.txt`, which `shell.py` generates from the conversion map,
-and runs the same `gui.pyw --convert …` command as the classic menu. Change the map, run `install.bat`,
+and runs the same `gui_qt.pyw --convert …` command as the classic menu. Change the map, run `install.bat`,
 and both menus update.
 
 ---

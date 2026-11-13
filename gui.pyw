@@ -216,10 +216,21 @@ def quick_convert(target, path):
     slot = os.getpid() % 5
     x, y = near_pointer(w, h, offset=16 + slot * 28)
     root.geometry(f"{w}x{h}+{x}+{y}")
+    try:
+        root.update()  # the dark title bar only takes once the window is on screen
+        title_bar_theme(root, system_is_dark())
+    except (OSError, AttributeError, tk.TclError):
+        pass
+
+    def fit():
+        """Shrink or grow to the new text, so there's no empty space under the buttons."""
+        root.update_idletasks()
+        root.geometry(f"{w}x{frame.winfo_reqheight()}")
 
     def finished(saved=None, error=None):
         bar.stop()
         bar.pack_forget()
+        root.after(0, fit)
         if error and error.startswith(ALREADY_SMALL):
             title.config(text=f"{src.name} is already small")
             detail.config(text="It couldn't get noticeably smaller, so no copy was made. "

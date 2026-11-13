@@ -3,6 +3,7 @@ import logging
 import multiprocessing as mp
 import os
 import queue
+import re
 import shutil
 import sys
 import tempfile
@@ -76,12 +77,19 @@ def _run_isolated(target, srcs, out_dir, opts, limit):
     return [Path(r) for r in result[1]]
 
 
-def convert(srcs, target, opts=None, dest_dir=None):
+def clean_name(name):
+    """A file name typed by the user, made safe: no folders, no characters Windows forbids."""
+    return re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", name or "").strip(" .")
+
+
+def convert(srcs, target, opts=None, dest_dir=None, name=None):
     """Convert `srcs` (one file, or several for merge actions) to `target`.
 
     Saves into `dest_dir`, or the first file's folder. One output -> one file; several outputs
-    (pages, sheets) -> a new folder holding them. Returns the saved file or folder.
+    (pages, sheets) -> a new folder holding them. `name` replaces the default file/folder name
+    (the extension is added). Returns the saved file or folder.
     """
+    name = clean_name(name)
     srcs = [Path(s) for s in srcs]
     opts = {k: v for k, v in (opts or {}).items() if not k.startswith("_")}
     if target not in converters.MULTI:
@@ -108,10 +116,13 @@ def convert(srcs, target, opts=None, dest_dir=None):
         try:
             dest.mkdir(parents=True, exist_ok=True)
             if len(outs) == 1:
-                saved = unique(dest / outs[0].name)
+                suffix = outs[0].suffix
+                if name.lower().endswith(suffix.lower()):  # "report.pdf" typed for a .pdf
+                    name = name[:-len(suffix)].rstrip(". ")
+                saved = unique(dest / (f"{name}{suffix}" if name else outs[0].name))
                 shutil.move(outs[0], saved)
             else:
-                saved = unique(dest / f"{srcs[0].stem} ({target})")
+                saved = unique(dest / (name or f"{srcs[0].stem} ({target})"))
                 saved.mkdir()
                 for o in outs:
                     shutil.move(o, saved / o.name)

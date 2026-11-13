@@ -5,10 +5,10 @@ cd /d "%~dp0"
 ".venv\Scripts\python.exe" -m pip install -q pyinstaller || exit /b 1
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --windowed --name FileConverter ^
     --icon assets\icon.ico --add-data "assets;assets" ^
-    --collect-submodules converters --hidden-import shell ^
+    --collect-submodules converters --hidden-import shell --hidden-import gui ^
     --collect-all tkinterdnd2 --collect-all sv_ttk --collect-all pdf2docx ^
     --collect-all pillow_heif --collect-all pymupdf ^
-    gui.pyw || exit /b 1
+    gui_qt.pyw || exit /b 1
 echo.
 echo Built: dist\FileConverter\FileConverter.exe
 echo Open it and switch on "Show in right-click menu" to point the menu at the .exe.
