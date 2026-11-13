@@ -2,9 +2,9 @@
 
 # Recast
 
-**Convert any file, or strip its hidden metadata, from the right-click menu in Windows 11. Fully offline.**
+**Convert any file, shrink it, or strip its hidden metadata, from the right-click menu in Windows 11. Fully offline.**
 
-Right-click a file → **Recast** → **PDF / DOCX / PPTX** or **Remove metadata**. The result appears
+Right-click a file → **Recast** → **PDF / DOCX / PPTX**, **Remove metadata** or **Smaller file**. The result appears
 next to the original. The app opens for anything else: images, audio, video, spreadsheets, OCR, merging PDFs.
 
 No server, no internet, no uploads. Everything runs on your PC with free, open-source tools.
@@ -41,6 +41,7 @@ No server, no internet, no uploads. Everything runs on your PC with free, open-s
 | Audio (MP3, WAV, M4A, OGG, FLAC) | Any of these |
 | Scanned PDF or photo of text | Searchable PDF, or plain text (OCR) |
 | PDF, Word, Excel, PowerPoint, images, audio, video | **Remove metadata**: a clean copy without author, GPS location, camera model, dates, comment authors, tags |
+| PDF, Word, Excel, PowerPoint, images, audio, video | **Smaller file**: a compressed copy in the same format, Light (looks the same) or Strong (smallest) |
 
 ---
 
@@ -103,6 +104,7 @@ Recast  ▸   Open in Recast…
             PPTX
             ───────────────
             Remove metadata
+            Smaller file
 ```
 
 The menu keeps to the three most-used formats, leaving out the file's own type. A small window shows
@@ -114,13 +116,19 @@ other format.
 exactly the same (photos keep their rotation and colours; audio and video aren't re-encoded). Text written
 *inside* a document, like a name in a paragraph, is content, not metadata, so it isn't touched.
 
+**Smaller file** saves a compressed copy, e.g. `video (compressed).mp4`, in the same format. **Light** looks
+the same; **Strong** is much smaller with visibly lower quality (photos capped at 1600 px, video at 720p). If a
+file can't get noticeably smaller, no copy is made and it tells you so.
+
 **In the app:**
 
 - Drag files or whole folders onto the window, or click **Add files…**.
-- **Convert to** lists only the formats that work for every file you added.
-- **Save to:** next to each file (the default), or a folder you pick.
-- Extra settings appear only when they apply: page range, image quality and size, video height, OCR language.
-- Double-click a finished file to show it in Explorer.
+- Pick a format: the buttons show only formats that work for every file you added (the rest are under **More**).
+  **Smaller file** and **Remove metadata** have their own row, since they keep the file type.
+- Press **Convert**. When it's done, the button becomes **Show in folder**, and each row gets a **Show** link.
+- Files are saved next to the originals; **Change** picks a folder instead.
+- Extra settings appear only when they apply: page range, image quality and size, video height, OCR language, how much smaller.
+- **Settings** (top right): dark mode and the right-click menu switch.
 
 ![Recast in dark mode](docs/app-dark.png)
 
@@ -170,6 +178,7 @@ Engines are named as text (`"module.function"`) and imported only when used, so 
 | `media.py` | FFmpeg | audio and video |
 | `ocr.py` | Tesseract | scans → searchable PDF / text |
 | `clean.py` | PyMuPDF, ExifTool, FFmpeg, zip rewriting for Office | remove metadata |
+| `compress.py` | PyMuPDF, Pillow, FFmpeg, zip rewriting for Office | smaller file |
 | `tools.py` | — | finds those programs, even when they aren't on `PATH` |
 
 ### 3. Running safely — `core.py`

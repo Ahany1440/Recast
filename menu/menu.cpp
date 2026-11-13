@@ -1,4 +1,4 @@
-// Windows 11 right-click menu entry ("Recast" > Open in Recast... / PDF / DOCX / PPTX / Remove metadata).
+// Windows 11 right-click menu entry ("Recast" > Open in Recast... / PDF / DOCX / PPTX / Remove metadata / Smaller file).
 // Explorer loads this through the package in AppxManifest.xml. What to show comes from menu.txt next to
 // this DLL, written by shell.py:
 //   line 1:           the command that starts the app, e.g. "C:\...\pythonw.exe" "C:\...\gui.pyw"
@@ -175,7 +175,7 @@ public:
     IFACEMETHODIMP EnumSubCommands(IEnumExplorerCommand** out) {
         if (!target.empty()) { *out = nullptr; return E_NOTIMPL; }
         // Every choice that appears for any file type, in menu.txt order; GetState hides the ones that don't fit.
-        // "Open in Recast" first with a line under it, then the formats, then "Remove metadata" below a line.
+        // "Open in Recast" first with a line under it, then the formats, then "Remove metadata" and "Smaller file" below a line.
         Config c = load_config();
         std::vector<IExplorerCommand*> subs;
         subs.push_back(new (std::nothrow) Command(L"*more", L"Open in Recast\u2026"));
@@ -183,11 +183,12 @@ public:
         for (auto& e : c.entries) {
             bool dup = false;
             for (auto& s : seen) if (s == e.target) dup = true;
-            if (dup || e.target == L"*more" || e.target == L"clean") continue;
+            if (dup || e.target == L"*more" || e.target == L"clean" || e.target == L"compress") continue;
             seen.push_back(e.target);
             subs.push_back(new (std::nothrow) Command(e.target, e.label));
         }
         subs.push_back(new (std::nothrow) Command(L"clean", L"Remove metadata"));
+        subs.push_back(new (std::nothrow) Command(L"compress", L"Smaller file"));
         *out = new (std::nothrow) Enum(subs);
         return *out ? S_OK : E_OUTOFMEMORY;
     }

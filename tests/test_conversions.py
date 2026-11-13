@@ -78,7 +78,12 @@ def test_conversion(ext, target, samples, tmp_path):
     src = samples / f"sample.{ext}"
     if not src.exists():
         pytest.skip(f"no sample.{ext} (a program needed to create it is missing)")
-    outs = converters.run(target, [src], tmp_path, {"_timeout": 300})
+    try:
+        outs = converters.run(target, [src], tmp_path, {"_timeout": 300})
+    except ConversionError as e:
+        if target == "compress" and "already about as small" in str(e):
+            return  # tiny samples can't shrink; the engine ran and refused as designed (see test_compress.py)
+        raise
     assert outs
     for o in outs:
         check(Path(o))

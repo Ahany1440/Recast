@@ -53,6 +53,8 @@ def menu_entries():
                   for n, t in enumerate(targets, 1)]
         if "clean" in outs:
             items.append(("90clean", "Remove metadata", _cmd("--convert", "clean", '"%1"')))
+        if "compress" in outs:
+            items.append(("91compress", "Smaller file", _cmd("--convert", "compress", '"%1"')))
         entries[ext] = items
     return entries
 

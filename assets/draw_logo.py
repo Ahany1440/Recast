@@ -27,6 +27,9 @@ if __name__ == "__main__":
     out = sys.argv[1]
     icon = draw()
     icon.save(f"{out}/icon.png")
-    icon.save(f"{out}/icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    # Every size Windows asks for at 100-200% display scaling, so it never has to stretch one itself.
+    sizes = [16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 128, 256]
+    frames = [icon.resize((s, s), Image.LANCZOS) for s in sizes]
+    frames[-1].save(f"{out}/icon.ico", sizes=[(s, s) for s in sizes], append_images=frames[:-1])
     for name, size in [("Square150x150Logo", 150), ("Square44x44Logo", 44), ("StoreLogo", 50)]:
         icon.resize((size, size), Image.LANCZOS).save(f"{out}/{name}.png")

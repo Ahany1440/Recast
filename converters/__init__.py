@@ -79,6 +79,9 @@ add(["pdf"] + IMAGES, "ocr-txt", "Text from scan (OCR)", "ocr.convert", ["tesser
 add(["pdf", "docx", "xlsx", "pptx"], "clean", "Remove metadata", "clean.convert")
 add(IMAGES, "clean", "Remove metadata", "clean.convert", ["exiftool"])
 add(VIDEO + AUDIO, "clean", "Remove metadata", "clean.convert", ["ffmpeg"])
+# Smaller file: a compressed copy in the same format
+add(["pdf", "docx", "xlsx", "pptx", "png", "jpg", "webp", "tiff", "heic"], "compress", "Smaller file", "compress.convert")
+add(VIDEO + ["mp3", "m4a", "ogg", "flac"], "compress", "Smaller file", "compress.convert", ["ffmpeg"])
 
 # Actions that take several files and make one.
 MULTI = {
